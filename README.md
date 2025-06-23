@@ -92,7 +92,7 @@ The application prioritizes security:
 - **Authentication**: Rate limiting in `SessionsController`, `bcrypt` passwords in `User` model.
 - **Sanitization**: `SanitizationConcern` prevents XSS by escaping characters (e.g., `&` to `&`).
 - **Strong Parameters**: `params.expect`/`params.permit` in controllers (`ChatsController`).
-- **Static Analysis**: `brakeman` for vulnerability checks (`Gemfile`).
+- **Static Analysis**: `brakeman` and `bin/importmap audit` for vulnerability checks (`Gemfile`).
 
 See `app/models/concerns/sanitization_concern.rb` for sanitization logic.
 
@@ -123,6 +123,7 @@ See `app/models/concerns/sanitization_concern.rb` for sanitization logic.
 - `bin/dev` includes `tailwindcss --watch` for CSS compilation.
 - The app runs on port **3044** instead of Rails' default 3000 to avoid conflicts with other Rails applications.
 - Environment variables may be needed for `solid_cache` or Active Storage.
+- Run `bin/importmap audit` to check JavaScript dependencies.
 
 
 ## 7. Testing Overview
