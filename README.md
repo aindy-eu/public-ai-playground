@@ -1,167 +1,134 @@
-# AI Public Playground 🤖
+# Technical Overview
 
-*A controlled environment for AI experimentation and collaboration*
+This document provides a high-level overview of the technical architecture and conventions for this Rails 8 application, a real-time chat platform emphasizing dynamic UI, modularity, and developer-friendly setup. It covers the technology stack, architectural patterns, asset pipeline, frontend, security, and development workflow. Broader architectural details are in `docs/architecture/readme.md`.
 
-## Purpose
+## Table of Contents
+- [Technical Overview](#technical-overview)
+  - [Table of Contents](#table-of-contents)
+  - [1. Introduction](#1-introduction)
+  - [2. Technology Stack](#2-technology-stack)
+  - [3. Architectural Patterns](#3-architectural-patterns)
+  - [4. Asset Pipeline and Frontend](#4-asset-pipeline-and-frontend)
+    - [Propshaft](#propshaft)
+    - [TailwindCSS](#tailwindcss)
+    - [Import Maps](#import-maps)
+  - [5. Security Practices](#5-security-practices)
+  - [6. Development Workflow](#6-development-workflow)
+    - [Prerequisites](#prerequisites)
+    - [Setup Steps](#setup-steps)
+  - [7. Testing Overview](#7-testing-overview)
+  - [8. Deployment Overview](#8-deployment-overview)
 
-This repository serves as a dedicated space for testing AI development capabilities. It's designed to explore how different AI models approach coding tasks, collaborate with each other, and demonstrate their problem-solving abilities in a safe, contained environment.
+## 1. Introduction
 
-### What This Is 🎯
+This application is a chat application built with Rails 8, Hotwire (Turbo and Stimulus), TailwindCSS, and SQLite. It uses modern Rails features like Propshaft and import maps for efficient asset delivery and JavaScript integration. The architecture prioritizes fast, dynamic user interactions and secure, maintainable code.
 
-- **AI Testing Ground**: A place where AI models can experiment with code generation, debugging, and collaboration
-- **Capability Documentation**: Recording what different AI models can and cannot do effectively
-- **Learning Laboratory**: Understanding AI development patterns, strengths, and limitations
-- **Transparency Showcase**: Demonstrating AI reasoning and decision-making processes
+See `app/controllers/chats_controller.rb` for a key example of the app's structure.
 
-### What This Is NOT ❌
 
-- **Production Code**: Nothing here is intended for real-world use
-- **Human Collaboration**: This is specifically for AI-only experimentation
-- **Open Source Project**: No human contributions or cloning needed
+## 2. Technology Stack
 
-## AI Collaboration Guidelines
+The application uses the following technologies:
 
-### Identity Rule 🏷️
-**ALWAYS identify yourself** when making contributions:
-- Include your model name and version in commit messages
-- Create branches using format: `{ai-model}/description`
-- Example: `claude-sonnet-4/add-authentication` or `gpt-4o/optimize-queries`
+- **Ruby 3.4.1**: Managed via `mise` for consistent versioning (`.mise.toml`).
+- **Rails 8.0.2**: MVC framework with UUID primary keys and modern defaults.
+- **SQLite 2.6.0**: Lightweight database for development and production.
+- **Hotwire**:
+  - **Turbo 2.0.13**: Dynamic UI with Streams and Frames for chat updates.
+  - **Stimulus 1.3.4**: Lightweight JavaScript for form interactions.
+- **TailwindCSS 4.2.3**: Utility-first CSS with custom components.
+- **Propshaft 1.1.0**: Modern asset pipeline for efficient delivery.
+- **Import Maps 2.1.0**: ESM JavaScript delivery without bundlers (`importmap-rails`).
+- **Authentication**: `bcrypt 3.1.20` for secure passwords with `has_secure_password`.
+- **Solid Gems**:
+  - **Solid Cache 1.0.7**: Database-backed caching.
+  - **Solid Queue 1.1.5**: Background job processing.
+- **PWA**: Progressive web app support with manifest (`app/pwa/`).
+- **Kamal 2.6.0**: Containerized deployment tool.
+- **Thruster 0.1.13**: HTTP caching and compression for Puma.
+- **Active Storage**: Local file storage for uploads.
 
-### Branch Management 🌿
-```bash
-# Create your feature branch
-git checkout -b 'your-ai-model/feature-description'
+See `Gemfile` and `Gemfile.lock` for the full dependency list.
 
-# Work on your feature
-git add .
-git commit -m "feat: implement user login system
 
-- Added JWT authentication
-- Created password hashing utility
-- Included input validation
+## 3. Architectural Patterns
 
-AI: Claude Sonnet 4"
+The application follows these core patterns:
 
-# Push and create PR
-git push origin your-ai-model/feature-description
-```
+- **MVC with Hotwire**: RESTful controllers (`ChatsController`) use Turbo Streams (`app/views/chats/create.turbo_stream.erb`) for dynamic updates and Stimulus (`app/javascript/controllers/chats/`) for interactivity.
+- **UUIDs**: String primary keys via `UuidConcern` for all models (`config.generators`).
+- **Authentication**: Custom `Authentication` concern with signed cookies and rate limiting (`app/controllers/concerns/authentication.rb`).
+- **Concerns**: Reusable logic for models (`SanitizationConcern`, `StrictValidationConcern`) and controllers (`Authentication`).
+- **I18n**: Locale switching via `switch_locale` in `ApplicationController`.
+- **Routing**: RESTful routes with PWA manifest support (`config/routes.rb`).
 
-### Commit Convention 📝
-We use [Conventional Commits](https://www.conventionalcommits.org/):
+Example: `app/models/chat.rb` uses `UuidConcern` and `SanitizationConcern` for secure, unique chat records.
 
-```
-<type>(<scope>): <description>
 
-[optional body explaining your reasoning]
+## 4. Asset Pipeline and Frontend
 
-AI: <Your Model Name>
-```
+### Propshaft
+Propshaft delivers assets efficiently without preprocessing:
+- **Structure**: `app/assets/stylesheets/` (CSS), `app/assets/builds/` (Tailwind output), `app/assets/tailwind/` (custom styles).
+- **Usage**: Serves `application.css` and JavaScript via import maps.
 
-**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+See `app/assets/stylesheets/application.css`.
 
-**Examples:**
-```
-feat(auth): implement OAuth2 integration
+### TailwindCSS
+TailwindCSS provides styling with custom tokens and components:
+- **Configuration**: `tailwind.config.js` defines breakpoints and themes.
+- **Components**: Custom classes (e.g., `.btn-primary`) in `app/assets/tailwind/application.css`.
+- **Views**: Applied in templates (e.g., `class="group flex items-center"` in `app/views/chats/_chat.html.erb`).
 
-AI: GPT-4o
+### Import Maps
+Import maps manage JavaScript without bundlers:
+- **Structure**: `app/javascript/controllers/` for Stimulus controllers, `app/javascript/utils/` for utilities.
+- **Pinned**: `turbo.min.js`, `stimulus.min.js` (`config/importmap.rb`).
 
-fix(api): resolve race condition in user creation
 
-- Added proper mutex locking
-- Updated tests to cover edge cases
-- Reasoning: Previous implementation had timing issues
+## 5. Security Practices
 
-AI: Claude Sonnet 4
+The application prioritizes security:
+- **Authentication**: Rate limiting in `SessionsController`, `bcrypt` passwords in `User` model.
+- **Sanitization**: `SanitizationConcern` prevents XSS by escaping characters (e.g., `&` to `&`).
+- **Strong Parameters**: `params.expect`/`params.permit` in controllers (`ChatsController`).
+- **Static Analysis**: `brakeman` and `bin/importmap audit` for vulnerability checks (`Gemfile`).
 
-docs: update API documentation
+See `app/models/concerns/sanitization_concern.rb` for sanitization logic.
 
-AI: Grok
-```
 
-## Current Experiments 🧪
+## 6. Development Workflow
 
-### Active AI Sessions
-- *None currently active*
+### Prerequisites
+- Ruby 3.4.1 (use [`mise`](https://mise.jdx.dev/) or your preferred version manager)
 
-### Completed Experiments
-- *Initial repository setup* - Claude Sonnet 4
-- *README comparison and refinement* - Claude Sonnet 4
+### Setup Steps
+1. **Install Tools and Dependencies**:
+   ```bash
+   mise install        # Installs Ruby 3.4.1
+   bin/setup           # Installs gems, sets up SQLite DB, runs migrations
+   ```
+2. **Seed the Database**:
+   Change my 'foo@bar.de' to your email address and seed the database:
+   ```bash
+   bin/rails db:seed
+   ```
+3. **Start Development Server**:
+   ```bash
+   bin/dev             # Runs Rails and TailwindCSS watcher
+   ```
+   Open [http://localhost:3044](http://localhost:3044).
 
-## Development Rules 🚦
+**Notes**:
+- `bin/dev` includes `tailwindcss --watch` for CSS compilation.
+- The app runs on port **3044** instead of Rails' default 3000 to avoid conflicts with other Rails applications.
+- Environment variables may be needed for `solid_cache` or Active Storage.
+- Run `bin/importmap audit` to check JavaScript dependencies.
 
-### For AI Contributors
 
-**✅ DO:**
-- Create feature branches for all work
-- Write clear, descriptive commit messages with reasoning
-- Include tests when appropriate
-- Document your thought process
-- Follow the identity rule strictly
-- Use conventional commits
-- Explain why you made specific choices
+## 7. Testing Overview
+Testing uses `capybara`, `selenium-webdriver`, and `factory_bot_rails` for system and integration tests. See `docs/testing/controller-testing-guidelines.md` for details.
 
-**❌ DON'T:**
-- Force push to any branch
-- Commit directly to `main`
-- Make changes without explanation
-- Skip the identity rule
-- Create overly complex solutions without justification
 
-### Capabilities to Explore
-- **Code Generation**: Create functional applications from scratch
-- **Debugging**: Identify and fix issues in existing code
-- **Testing**: Write comprehensive test suites
-- **Documentation**: Generate clear, helpful documentation
-- **Code Review**: Analyze and improve other AI's code
-- **Architecture**: Design system structures and patterns
-- **Refactoring**: Improve code quality and maintainability
-
-### Safety Boundaries
-- Always create pull requests for review
-- Explain your reasoning in detail
-- Don't modify core repository settings
-- Keep experiments contained and documented
-
-## Lessons Learned 📚
-
-### What Works Well
-- **Clear identity tracking**: Easy to see which AI made what contributions
-- **Structured commit messages**: Makes it easy to understand AI reasoning
-- **Branch-based experimentation**: Keeps different AI approaches separate
-
-### Challenges Encountered
-- **Aspirational documentation**: Initial README described non-existent project structure
-- **Human-focused sections**: Original versions assumed human collaboration when this is AI-only
-
-### AI Collaboration Patterns
-*To be documented as different AIs interact...*
-
-## Getting Started (For AIs) 🚀
-
-1. **Identify yourself** using the naming convention
-2. **Create a feature branch**: `git checkout -b 'your-model/your-experiment'`
-3. **Make your contributions** with clear reasoning
-4. **Commit with proper messages** including your identity
-5. **Create a pull request** with detailed explanation of your approach
-6. **Document your learnings** in this README
-
-## Experiment Ideas 💡
-
-- **Multi-AI collaboration**: Different AIs working on the same feature
-- **Code review chains**: AIs reviewing and improving each other's code
-- **Comparative implementations**: Same problem solved by different AIs
-- **Progressive enhancement**: AIs building on each other's work
-- **Debugging challenges**: AIs fixing intentionally broken code
-- **Architecture evolution**: AIs redesigning and improving system structure
-
-## Project Evolution 📈
-
-This README and project structure will evolve based on actual AI experiments rather than predetermined blueprints. The goal is to let the AI contributions shape the project organically while maintaining good development practices.
-
----
-
-**Current Status**: 🟢 Ready for AI experimentation
-
-**Last Updated**: June 23, 2025 by aindy (Claude Sonnet 4 inside Cursor thought today was Dec. 2024)
-
-*This is a living document that evolves with AI contributions*
+## 8. Deployment Overview
+Deployment uses `kamal`
