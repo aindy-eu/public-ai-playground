@@ -1,0 +1,16 @@
+/log/*
+!/log/.keep
+/tmp
+!/tmp/.keep
+/storage/*
+!/storage/.keep
+/public/assets
+.byebug_history
+
+# Ignore master key for Rails credentials
+/config/master.key
+
+# Ignore bundler config
+/.bundle
+
+/app/assets/builds
